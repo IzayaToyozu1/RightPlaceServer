@@ -1,5 +1,4 @@
 ﻿using RightPlaceBL.Server.Model;
-using RightPlaceBL.DataBase;
 using RightPlaceBL;
 using System;
 using System.Threading;
@@ -10,7 +9,6 @@ namespace RightPlaceServerConsole
     {
         static ServerObject server; // сервер
         static Thread listenThread; // потока для прослушивания
-        static ApplicationContext database = new ApplicationContext();
         static void Main(string[] args)
         {
             

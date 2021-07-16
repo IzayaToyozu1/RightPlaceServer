@@ -11,18 +11,16 @@ namespace RightPlaceBL.Server.Model
 {
     public class ClientObject
     {
-        User _user;
+        public User User { get; private set; }
         internal NetworkStream Stream { get; private set; }
         TcpClient _client;
         ServerObject _server;
-        ApplicationContext _dataBase;
-        Chat _chat;
+        string _message;
 
-        public ClientObject (TcpClient client, ServerObject server, ApplicationContext dataBase)
+        public ClientObject (TcpClient client, ServerObject server)
         {
             _client = client;
             _server = server;
-            _dataBase = dataBase;
             _server.AddConnection(this);
         }
         public void Process()
@@ -35,40 +33,70 @@ namespace RightPlaceBL.Server.Model
                 {
                     case Command.authentication:
                         command = Command.authentication;
-                        _server.SendData(command, this);
-                        _user = GetDataUser();
-                        Authentication(_user.Name, _user.Password);
+                        _server.SentData(command, this);
+                        User = GetDataUser();
+                        Authentication(User.Login, User.Password);
                         break;
 
                     case Command.registration:
                         command = Command.registration;
-                        _server.SendData(command, this);
-                        _user = GetDataUser();
-                        _dataBase.Users.Add(_user);
-                        _dataBase.SaveChanges();
+                        _server.SentData(command, this);
+                        User = GetDataUser();
+                        using(ApplicationContext db = new ApplicationContext())
+                        {
+                            db.Users.Add(User);
+                            db.SaveChanges();
+                        }
                         break;
 
                     case Command.createChat:
-                        _server.SendData(command, this);
+                        _server.SentData(command, this);
                         string nameChat = GetDataStream();
-                        int port = _server.CreatChat(nameChat);
-                        _server.SendData(port.ToString(), this);
+                        using (ApplicationContext db = new ApplicationContext())
+                        {
+                            Chat chat = new Chat() {Name = nameChat };
+                            db.Chats.Add(chat);
+                            User.Chats.Add(chat);
+                            db.SaveChanges();
+                        }
                         break;
 
                     case Command.addChat:
-                        _server.SendData(command, this);
+                        _server.SentData(command, this);
                         string chatName = GetDataStream();
-                        _chat = _server.Chats.FirstOrDefault(c => c.Name == chatName);
-                        if (_chat == null) 
+                        using (ApplicationContext db = new ApplicationContext())
                         {
-                            _server.SendData("Чат не сущ.", this);
-                            break;
+                            Chat chat = db.Chats.FirstOrDefault(c => c.Name == chatName);
+                            User.Chats.Add(chat);
+                            db.SaveChanges();
                         }
-                        _server.SendData(_chat.Port.ToString(), this);
                         break;
 
                     case Command.leaveChat:
+                        _server.SentData(command, this);
+                        chatName = GetDataStream();
+                        using (ApplicationContext db = new ApplicationContext())
+                        {
+                            Chat chat = db.Chats.FirstOrDefault(c => c.Name == chatName);
+                            User.Chats.Remove(chat);
+                            db.SaveChanges();
+                        }
+                        break;
 
+                    case Command.messageChat:
+                        _server.SentData(command, this);
+                        using (ApplicationContext db = new ApplicationContext())
+                        {
+                            Chat chat = ServerGetSet<Chat>.GetData(Stream);
+                            _message = ServerGetSet<string>.GetDataStream(Stream);
+                            foreach(var user in chat.Users)
+                            {
+                                var client = _server.clientObjects.First(c => c.User == user);
+                                ServerGetSet<Command>.SentDataStrem(client.Stream, Command.getMessageChat);
+                                ServerGetSet<string>.SentString(chat.Name, client.Stream);
+                                ServerGetSet<string>.SentString(_message, client.Stream);
+                            }
+                        }
                         break;
                 }
             }
@@ -89,16 +117,19 @@ namespace RightPlaceBL.Server.Model
             return ServerGetSet<string>.GetDataStream(Stream);
         }
 
-        private bool Authentication(string name, string password)
+        private void Authentication(string login, string password)
         {
-            _user = _dataBase.Users.FirstOrDefault(u => u.Name == name && u.Password == password);
-            if (_user == null)
+            using (ApplicationContext db = new ApplicationContext())
             {
-                _server.SendData(Command.notUser, this);
-                return false;
+                User = db.Users.FirstOrDefault(u => u.Name == login && u.Password == password);
+                if (User == null)
+                {
+                    _server.SentData(Command.notUser, this);
+                    return;
+                }
+                _server.SentData(Command.okUser, this);
+                ServerGetSet<List<Chat>>.SentDataStrem(Stream, User.Chats);
             }
-            _server.SendData(Command.okUser, this);
-            return true;
         }
 
 
@@ -119,6 +150,8 @@ namespace RightPlaceBL.Server.Model
         registration,
         createChat,
         addChat,
-        leaveChat
+        leaveChat,
+        messageChat,
+        getMessageChat
     }
 }

@@ -19,7 +19,6 @@ namespace RightPlaceBL.Server.Model
         ClientObject ClientObject { get; set; }
         internal List<ClientObject> clientObjects = new List<ClientObject>();
         internal List<Chat> Chats = new List<Chat>();
-        internal ApplicationContext applicationContext = new ApplicationContext();
 
         public void Listen()
         {
@@ -28,12 +27,10 @@ namespace RightPlaceBL.Server.Model
                 tcpListener = new TcpListener(IPAddress.Any, 8888);
                 tcpListener.Start();
 
-                
                 while (true)
                 {
                     TcpClient tcpClient = tcpListener.AcceptTcpClient();
-
-                    ClientObject = new ClientObject(tcpClient, this, applicationContext);
+                    ClientObject = new ClientObject(tcpClient, this);
                     Thread clientThread = new Thread(new ThreadStart(ClientObject.Process));
                     clientThread.Start();
                 }
@@ -49,43 +46,18 @@ namespace RightPlaceBL.Server.Model
             clientObjects.Add(client);
         }
 
-        public void SendData(Command command, ClientObject client)
+        public void SentData(Command command, ClientObject client)
         {
             string json = JsonSerializer.Serialize<Command>(command);
             byte[] data = Encoding.Unicode.GetBytes(json);
             client.Stream.Write(data, 0, data.Length);
         }
-        public void SendData(string message, ClientObject client)
+
+        public void SentData(string message, ClientObject client)
         {
             byte[] data = Encoding.Unicode.GetBytes(message);
             client.Stream.Write(data, 0, data.Length);
         }
-
-        public int CreatChat(string chatName)
-        {
-            Chat chat = new Chat() { Name = chatName,};
-            chat.Port = GenerationPort(chat);
-            Chats.Add(chat);
-
-            listenChatThread = new Thread(new ThreadStart(chat.ListenerChat));
-            listenChatThread.Start(); //старт потока
-            return chat.Port;
-        }
-
-        public int GenerationPort(Chat chat)
-        {
-            int port = 1;
-            for (int i = 0; i < Chats.Count; i++)
-            {
-                if(port == Chats[i].Port)
-                {
-                    port++;
-                }
-            }
-            return port;
-        }
-
-        
 
         // отключение всех клиентов
         public void Disconnect()
