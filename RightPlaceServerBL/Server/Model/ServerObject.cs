@@ -46,33 +46,18 @@ namespace RightPlaceBL.Server.Model
             clientObjects.Add(client);
         }
 
-        public void SendData(Command command, ClientObject client)
+        public void SentData(Command command, ClientObject client)
         {
             string json = JsonSerializer.Serialize<Command>(command);
             byte[] data = Encoding.Unicode.GetBytes(json);
             client.Stream.Write(data, 0, data.Length);
         }
 
-        public void SendData(string message, ClientObject client)
+        public void SentData(string message, ClientObject client)
         {
             byte[] data = Encoding.Unicode.GetBytes(message);
             client.Stream.Write(data, 0, data.Length);
         }
-
-        public int GenerationPort(Chat chat)
-        {
-            int port = 1;
-            for (int i = 0; i < Chats.Count; i++)
-            {
-                if(port == Chats[i].Port)
-                {
-                    port++;
-                }
-            }
-            return port;
-        }
-
-        
 
         // отключение всех клиентов
         public void Disconnect()
