@@ -1,6 +1,0 @@
-{
-  "ConnectionsString": {
-    "DefaultConnection": "Server=WIN-1TE5KD8FSVD\\MSSQLSERVER01;Database=RightPlaceUsers;Trusted_Connection=true;"
-  }
-
-}

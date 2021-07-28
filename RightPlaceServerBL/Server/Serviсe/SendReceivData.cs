@@ -6,27 +6,23 @@ using System.Threading.Tasks;
 using System.Net.Sockets;
 using System.Text.Json;
 
-namespace RightPlaceBL.Service
+namespace RightPlaceBL.Server.Service
 {
-    public static class ServerGetSet<T>
+    public class SendReceivData
     {
-        public static T GetData(NetworkStream stream)
+        public static void SendData(NetworkStream stream, string obj)
         {
-            return JsonSerializer.Deserialize<T>(GetDataStream(stream));
-        }
-        public static void SentDataStrem(NetworkStream stream, T obj)
-        {
-            string json = JsonSerializer.Serialize<T>(obj);
-            byte[] data = Encoding.Unicode.GetBytes(json);
+            byte[] data = Encoding.Unicode.GetBytes(obj);
             stream.Write(data, 0, data.Length);
         }
 
-        public static void SentString(string message, NetworkStream stream)
+        public static void SendData<T>(NetworkStream stream, T obj)
         {
-            byte[] data = Encoding.Unicode.GetBytes(message);
-            stream.Write(data, 0, data.Length);
+            string json = JsonSerializer.Serialize<T>(obj);
+            SendData(stream, json);
         }
-        public static string GetDataStream(NetworkStream stream)
+
+        public static string GetData(NetworkStream stream)
         {
             byte[] data = new byte[64];
             StringBuilder builder = new StringBuilder();
@@ -39,6 +35,12 @@ namespace RightPlaceBL.Service
             while (stream.DataAvailable);
 
             return builder.ToString();
+        }
+
+        public static T GetData<T>(NetworkStream stream)
+        {
+            string obj = GetData(stream);
+            return JsonSerializer.Deserialize<T>(obj);
         }
     }
 }

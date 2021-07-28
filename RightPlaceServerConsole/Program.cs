@@ -3,22 +3,22 @@ using RightPlaceBL.DataBase;
 using RightPlaceBL;
 using System;
 using System.Threading;
+using System.Threading.Tasks;
 
 namespace RightPlaceServerConsole
 {
     class Program
     {
-        static ServerObject server; // сервер
-        static Thread listenThread; // потока для прослушивания
-        static ApplicationContext database = new ApplicationContext();
+        static Server server; // сервер
+        static Task listenTask; // потока для прослушивания
         static void Main(string[] args)
         {
             
             try
             {
-                server = new ServerObject();
-                listenThread = new Thread(new ThreadStart(server.Listen));
-                listenThread.Start(); //старт потока
+                server = new Server();
+                listenTask = new Task(server.Listen);
+                listenTask.Start(); //старт потока
             }
             catch (Exception ex)
             {
