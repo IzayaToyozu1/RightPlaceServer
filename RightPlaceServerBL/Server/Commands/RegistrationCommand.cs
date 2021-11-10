@@ -1,33 +1,46 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
-using System.Net.Sockets;
-using RightPlaceBL.Model;
+﻿using RightPlaceBL.Model;
 using RightPlaceBL.Server.Service;
-using RightPlaceBL.Service;
-
+using System;
+using System.Linq;
+using System.Net.Sockets;
+using System.Text.Json;
+using System.Text.RegularExpressions;
 
 namespace RightPlaceBL.Server.Commands
 {
-    public class RegistrationCommand : ICommand
+    public class RegistrationCommand : Commands
     {
-        UserMonipulator _userMonipulator;
-        NetworkStream _stream;
-
-        public RegistrationCommand(UserMonipulator userMonipulator, NetworkStream stream)
+        const string PATTERN_EMAIL = @"^(?("")(""[^""]+?""@)|(([0-9a-z]((\.(?!\.))|[-!#\$%&'\*\+/=\?\^`\{\}\|~\w])*)(?<=[0-9a-z])@))" +
+                               @"(?(\[)(\[(\d{1,3}\.){3}\d{1,3}\])|(([0-9a-z][-\w]*[0-9a-z]*\.)+[a-z0-9]{2,17}))$";
+        public RegistrationCommand(NetworkStream stream) : base(stream)
         {
-            _userMonipulator = userMonipulator;
-            _stream = stream;
         }
-        public void Execude()
+
+        public void Execude(string data)
         {
-            _userMonipulator.User = SendReceivData.GetData<User>(_stream);
-            _userMonipulator.Registration();
-            string commandClient = "LoginTrue";
-            SendReceivData.SendData(_stream, commandClient);
-            SendReceivData.SendData<User>(_stream, _userMonipulator.User);
+            string dataSend = "%Registr%";
+            string errorSend = "ErrorReg";
+            User user = JsonSerializer.Deserialize<User>(data);
+            if (Regex.IsMatch(user.Email, PATTERN_EMAIL, RegexOptions.IgnoreCase))
+            {
+                SendReceivData.SendData(_stream, errorSend+ " неверно введен Email");
+                return;
+            }
+            using(ApplicationContext db = new ApplicationContext())
+            {
+                foreach(var u in db.Users)
+                {
+                    if(user.Login == u.Login)
+                    {
+                        dataSend = "%ErrorReg";
+                        SendReceivData.SendData(_stream, errorSend + "логин занят");
+                        return;
+                    }
+                }
+                db.Users.Add(user);
+                db.SaveChanges();
+            }
+            SendReceivData.SendData(_stream, dataSend + "Аккаунт создан");
         }
     }
 }

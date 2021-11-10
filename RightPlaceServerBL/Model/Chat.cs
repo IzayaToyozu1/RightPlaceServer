@@ -10,12 +10,14 @@ namespace RightPlaceBL.Model
     {
         public int Id { get; set; }
         public string Name { get; set; }
-        public List<User> Users { get; set; } = new List<User>();
-        public ListMessage ListMessage { get; }
+        public List<User> Users { get; set; }
+        public List<Message> Message { get; set; }
         public Chat() { }
         public Chat(string name)
         {
             Name = name;
+            Users = new List<User>();
+            Message = new List<Message>();
         }
     }
 }
