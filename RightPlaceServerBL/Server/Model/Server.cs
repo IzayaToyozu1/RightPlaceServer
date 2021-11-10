@@ -4,19 +4,18 @@ using System.Collections.Generic;
 using System.Net;
 using System.Net.Sockets;
 using System.Threading.Tasks;
+using System.Linq;
 
 namespace RightPlaceBL.Server.Model
 {
     public class Server
     {
+        private const string _ip = "187.135.115.246";
+        private const string _port = "8888";
+
         TcpListener tcpListener;
-        Client Client { get; set; }
-
-        public Dictionary<string, ICommand> ServerCommands = new Dictionary<string, ICommand>();
-
-        internal List<Client> clientObjects = new List<Client>();
-        internal CommandsServer CommandsServer { get; private set; }
-
+        List<Client> clientObjects = new List<Client>();
+ 
         public void Listen()
         {
             try
@@ -27,7 +26,7 @@ namespace RightPlaceBL.Server.Model
                 while (true)
                 {
                     TcpClient tcpClient = tcpListener.AcceptTcpClient();
-                    Client = new Client(tcpClient);
+                    Client Client = new Client(tcpClient, this);
                     Task task = new Task(Client.Process);
                     task.Start();
                 }
@@ -43,13 +42,18 @@ namespace RightPlaceBL.Server.Model
             clientObjects.Add(client);
         }
 
-        
+        public void RemoveConection(int Id)
+        {
+            Client client = clientObjects.FirstOrDefault(u => u.User.Id == Id);
+            if (client != null)
+                clientObjects.Remove(client);
+        }
+
         public void Disconnect()
         {
-            tcpListener.Stop(); 
-
-            Client.Close(); 
-           
+            tcpListener.Stop();
+            foreach (var client in clientObjects)
+                client.Close();
             Environment.Exit(0); 
         }
     }

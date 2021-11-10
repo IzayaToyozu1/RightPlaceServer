@@ -19,8 +19,7 @@ namespace RightPlaceBL.Service
 
         public void AddMessage(string message)
         {
-            Chat.ListMessage.Messages.Add(message);
-            NewMessage?.Invoke(message);
+            
         }
     }
 }
